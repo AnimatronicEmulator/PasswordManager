@@ -2,12 +2,33 @@ from tkinter import *
 from tkinter import messagebox
 import random
 import pyperclip
+import json
+
 LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 SYMBOLS = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
+
+
+# ---------------------------- PASSWORD GENERATOR ------------------------------- #
+def password_finder():
+    website = website_entry.get().title()
+    try:
+        with open("password_doc.json", "r") as password_doc:
+            data = json.load(password_doc)
+    except json.decoder.JSONDecodeError:
+        messagebox.showerror(title=f"Entry for {website}", message=f"A password entry for {website} doesn't exist.")
+    else:
+        if website in data:
+            username = data[website]["Username"]
+            password = data[website]["Password"]
+            messagebox.showinfo(title=f"Entry for {website}", message=f"{website}\nUsername: {username}\n"
+                                                                      f"Password: {password}")
+            pyperclip.copy(password)
+        else:
+            messagebox.showerror(title=f"Entry for {website}", message=f"A password entry for {website} doesn't exist.")
 
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
@@ -29,18 +50,28 @@ def save_password():
     username = email_username_entry.get()
     password = password_entry.get()
 
+    new_entry = {website: {
+        "Username": username,
+        "Password": password,
+    }}
+
     if len(website) == 0 or len(username) == 0 or len(password) == 0:
         messagebox.showerror(title="Invalid Entry", message="Please don't leave any fields empty!")
+
     else:
-        if messagebox.askyesno(title="New Entry Confirmation",
-                               message=f"Does everything in the entry look correct?\n\nWebsite:"
-                                       f" {website}\nUsername: {username}\nPassword: {password}"):
-            with open("password_doc.txt", "a") as password_doc:
-                password_doc.write(f"{website} | {username} | {password}\n")
+        try:
+            with open("password_doc.json", "r") as password_doc:
+                data = json.load(password_doc)
+        except json.decoder.JSONDecodeError:
+            with open("password_doc.json", "w") as password_doc:
+                json.dump(new_entry, password_doc, indent=4)
+        else:
+            data.update(new_entry)
+            with open("password_doc.json", "w") as password_doc:
+                json.dump(data, password_doc, indent=4)
+        finally:
             website_entry.delete(0, "end")
             password_entry.delete(0, "end")
-        else:
-            pass
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -56,9 +87,12 @@ canvas.grid(row=0, column=0, columnspan=3)
 website_label = Label(text="Website: ", bg="white")
 website_label.grid(row=1, column=0, sticky="E")
 
-website_entry = Entry(width=35, borderwidth=2, relief="sunken")
-website_entry.grid(row=1, column=1, columnspan=2, sticky="W")
+website_entry = Entry(width=16, borderwidth=2, relief="sunken")
+website_entry.grid(row=1, column=1, columnspan=1, sticky="W")
 website_entry.focus()
+
+search_button = Button(text="Search", command=password_finder, width=14, bg="white", borderwidth=1, relief="ridge")
+search_button.grid(row=1, column=2, sticky="W")
 
 email_username_label = Label(text="Email/Username: ", bg="white")
 email_username_label.grid(row=2, column=0, sticky="E")
